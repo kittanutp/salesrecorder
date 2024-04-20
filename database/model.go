@@ -1,36 +1,37 @@
 package database
 
+import (
+	"time"
+)
+
 type SaleItem struct {
-	ID     int `json:"id"`
-	SaleID int `json:"sale_id"`
-	ItemID int `json:"item_id"`
-	Amount int `json:"amount"`
+	ID     uint `gorm:"primaryKey" json:"id"`
+	SaleID uint `json:"sale_id"`
+	ItemID uint `json:"item_id"`
+	Amount uint `json:"amount"`
 }
 
 type Sale struct {
-	ID        int     `json:"id"`
-	UserID    int     `json:"user_id"`
-	Price     float64 `json:"price"`
-	CreatedAt string  `json:"created_at"`
+	ID        uint       `gorm:"primaryKey" json:"id"`
+	UserID    int        `json:"user_id"`
+	Price     float64    `json:"price"`
+	CreatedAt time.Time  `json:"created_at"`
+	Item      []SaleItem `gorm:"foreignKey:SaleID" json:"items"`
 }
 
 type Item struct {
-	ID        int     `json:"id"`
-	Name      string  `json:"name"`
-	CreatedAt string  `json:"created_at"`
-	Cost      float64 `json:"cost"`
-	UserID    int     `json:"user_id"`
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	Cost      float64   `json:"cost"`
+	UserID    uint      `json:"user_id"`
 }
 
 type User struct {
-	ID        int    `json:"id"`
-	Username  string `json:"username"`
-	Password  string `json:"password"`
-	CreatedAt string `json:"created_at"`
-}
-
-type AccessToken struct {
-	ID     int    `json:"id"`
-	UserID int    `json:"user_id"`
-	Token  string `json:"token"`
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Username  string    `json:"username"`
+	Password  string    `json:"password"`
+	CreatedAt time.Time `json:"created_at"`
+	Sales     []Sale    `gorm:"foreignKey:UserID" json:"sales"`
+	Items     []Item    `gorm:"foreignKey:UserID" json:"items"`
 }

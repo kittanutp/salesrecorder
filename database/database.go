@@ -5,8 +5,10 @@ import (
 	"log"
 
 	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 
-	config "sr-server/config"
+	config "github.com/kittanutp/salesrecorder/config"
 )
 
 // create connection with postgres db
@@ -32,5 +34,16 @@ func CreateConnection() *sql.DB {
 
 	log.Println("Successfully connected!")
 	// return the connection
+	return db
+}
+
+func Connect() *gorm.DB {
+	db, err := gorm.Open(postgres.Open(config.PsqlInfo), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+
+	// Migrate the schema
+	db.AutoMigrate(&User{}, &Item{}, &Sale{}, &SaleItem{})
 	return db
 }

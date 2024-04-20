@@ -1,26 +1,23 @@
 package service
 
 import (
-	"crypto/rand"
 	"crypto/sha256"
-	"database/sql"
 	"encoding/hex"
+	"errors"
 	"log"
 	"net/http"
 
-	DBEngine "sr-server/database"
+	"github.com/kittanutp/salesrecorder/database"
+	"github.com/kittanutp/salesrecorder/schema"
+	"gorm.io/gorm"
 
 	"github.com/gin-gonic/gin"
 )
 
-type User = DBEngine.User
-type Token = DBEngine.AccessToken
+func (db *DBController) CreateUser(c *gin.Context) {
+	var user database.User
 
-func CreateUser(c *gin.Context) {
-	AdminAuth(c)
-	var user User
-
-	if err := c.BindJSON(&user); err != nil {
+	if err := c.ShouldBind(&user); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
@@ -28,42 +25,23 @@ func CreateUser(c *gin.Context) {
 	hashPassword.Write([]byte(user.Password))
 	user.Password = hex.EncodeToString(hashPassword.Sum((nil)))
 
-	db := DBEngine.CreateConnection()
-	defer db.Close()
+	res := db.Database.Create(&user)
 
-	sqlStatement := `INSERT INTO "user" ("username", "password", "created_at") VALUES ($1, $2, now()) RETURNING "id", "username", "created_at"`
-	err := db.QueryRow(sqlStatement, user.Username, user.Password).Scan(&user.ID, &user.Username, &user.CreatedAt)
-	if err != nil {
-		log.Fatalf("Unable to execute the query. %v", err)
+	if res.Error != nil {
+		log.Fatalf("Unable to execute the query. %v", res.Error)
 	}
 
-	var access Token
-	sqlStatement = `INSERT INTO "access_token" ("user_id", "token") VALUES ($1, $2) RETURNING "id", "user_id", "token"`
-	err = db.QueryRow(sqlStatement, user.ID, "").Scan(&access.ID, &access.UserID, &access.Token)
-	if err != nil {
-		log.Fatalf("Unable to execute the query. %v", err)
-	}
-
-	log.Printf("Inserted a single record %v", user.ID)
 	c.JSON(http.StatusCreated, gin.H{"username": user.Username, "id": user.ID, "created_at": user.CreatedAt})
 }
 
-func LogIn(c *gin.Context) {
-	var requestedUser User
-	var user User
+func (db *DBController) LogIn(c *gin.Context) {
+	var requestedUser schema.UserRequest
 	if err := c.BindJSON(&requestedUser); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-	db := DBEngine.CreateConnection()
-	defer db.Close()
-	sqlStatement := `SELECT * FROM "user" WHERE "username" = ($1)`
-
-	err := db.QueryRow(sqlStatement, requestedUser.Username).Scan(&user.ID, &user.Username, &user.Password, &user.CreatedAt)
-
-	if err != nil {
-		log.Fatalf("Unable to execute the query. %v", err)
-	}
+	var user = database.User{Username: requestedUser.Username}
+	db.Database.First(&user)
 	hashPassword := sha256.New()
 	hashPassword.Write([]byte(requestedUser.Password))
 	requestedUser.Password = hex.EncodeToString(hashPassword.Sum((nil)))
@@ -71,37 +49,40 @@ func LogIn(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Wrong username or password"})
 		return
 	} else {
-		token := GenerateSecureToken(db, user.ID)
-		c.JSON(http.StatusOK, gin.H{"id": user.ID, "username": user.Username, "created_at": user.CreatedAt, "token": token})
+		token := GenerateToken(user.Username, true)
+		c.JSON(http.StatusOK, gin.H{"token": token})
 	}
 }
 
-func GenerateSecureToken(db *sql.DB, user_id int) string {
-	b := make([]byte, 100)
-	if _, err := rand.Read(b); err != nil {
-		return ""
-	}
-	token := hex.EncodeToString(b)
-
-	sqlStatement := `UPDATE "access_token" SET	"id" = "id", "user_id" = $1, "token" = $2 WHERE "user_id" = $1;`
-	_, err := db.Exec(sqlStatement, user_id, token)
+func (db *DBController) GetUserInfo(c *gin.Context) {
+	user, err := GetUserFromCtx(c)
 	if err != nil {
-		log.Fatalf("Unable to execute the query. %v", err)
+		c.AbortWithStatusJSON(400, err)
+		return
 	}
-	return token
+
+	c.JSON(http.StatusOK, gin.H{"username": user.Username, "id": user.ID, "created_at": user.CreatedAt})
 }
 
-func GetUserFromToken(token string) int {
-	var access Token
-
-	db := DBEngine.CreateConnection()
-	defer db.Close()
-	sqlStatement := `SELECT * FROM "access_token" WHERE "token" = ($1)`
-
-	err := db.QueryRow(sqlStatement, token).Scan(&access.ID, &access.UserID, &access.Token)
+func GetUserUsername(db *gorm.DB, username string) (*database.User, error) {
+	user := database.User{}
+	err := db.Where("username = ?", username).First(&user).Error
 	if err != nil {
-		log.Fatalf("Unable to execute the query. %v", err)
+		return nil, err
 	}
-	log.Printf("Authorized User %v", access.UserID)
-	return access.UserID
+	return &user, nil
+}
+
+func GetUserFromCtx(c *gin.Context) (*database.User, error) {
+	userData, exist := c.Get("user")
+	if !exist {
+		c.AbortWithStatus(400)
+		return nil, errors.New("unable to get user from ctx")
+	}
+	user, ok := userData.(*database.User)
+	if !ok {
+		c.AbortWithStatus(400)
+		return nil, errors.New("invalid user format")
+	}
+	return user, nil
 }

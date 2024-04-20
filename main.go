@@ -4,8 +4,10 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
-	config "sr-server/config"
-	service "sr-server/service"
+	"github.com/kittanutp/salesrecorder/config"
+	"github.com/kittanutp/salesrecorder/database"
+	"github.com/kittanutp/salesrecorder/middleware"
+	"github.com/kittanutp/salesrecorder/service"
 )
 
 func main() {
@@ -16,23 +18,37 @@ func main() {
 		AllowHeaders: []string{"Content-Type,access-control-allow-origin, access-control-allow-headers"},
 	}))
 	router.SetTrustedProxies(config.Origins)
-	saleRoutes := router.Group("api/sale")
+
+	crtl := service.DBController{Database: database.Connect()}
+
+	adminRoutes := router.Group(("api/admin"))
+	adminRoutes.Use(middleware.AuthApp())
 	{
-		saleRoutes.GET("get-sales", service.GetSaleItems)
-		saleRoutes.POST("add-sale", service.AddSale)
+		adminRoutes.GET("test", service.Test)
+		adminRoutes.POST("create-user", crtl.CreateUser)
 
 	}
-	itemRoutes := router.Group("api/item")
-	itemRoutes.Use()
-	{
-		itemRoutes.GET("all", service.GetItems)
-		itemRoutes.GET("user", service.GetItemsByUser)
-		itemRoutes.POST("create", service.CreateItem)
-	}
+	// saleRoutes := router.Group("api/sale")
+	// {
+	// 	saleRoutes.GET("get-sales", service.GetSaleItems)
+	// 	saleRoutes.POST("add-sale", service.AddSale)
+
+	// }
+	// itemRoutes := router.Group("api/item")
+	// itemRoutes.Use()
+	// {
+	// 	itemRoutes.GET("all", service.GetItems)
+	// 	itemRoutes.GET("user", service.GetItemsByUser)
+	// 	itemRoutes.POST("create", service.CreateItem)
+	// }
 	userRoutes := router.Group("api/user")
 	{
-		userRoutes.POST("create", service.CreateUser)
-		userRoutes.POST("login", service.LogIn)
+		userRoutes.POST("login", crtl.LogIn)
+	}
+	userAuthRoutes := router.Group("api/user")
+	userAuthRoutes.Use(middleware.AuthUser())
+	{
+		userAuthRoutes.GET("info", crtl.GetUserInfo)
 	}
 
 	router.Run("localhost:8000")

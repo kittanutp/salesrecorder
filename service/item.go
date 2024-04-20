@@ -4,16 +4,14 @@ import (
 	"log"
 	"net/http"
 
-	DBEngine "sr-server/database"
+	DBEngine "github.com/kittanutp/salesrecorder/database"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Item = DBEngine.Item
-type AccessToken = DBEngine.AccessToken
 
 func GetItems(c *gin.Context) {
-	AdminAuth(c)
 	db := DBEngine.CreateConnection()
 	defer db.Close()
 	var items []Item
@@ -38,7 +36,7 @@ func GetItems(c *gin.Context) {
 }
 
 func GetItemsByUser(c *gin.Context) {
-	user_id := GetHeaderAuth(c)
+	user_id := 1
 	db := DBEngine.CreateConnection()
 	defer db.Close()
 	var items []Item
@@ -63,7 +61,6 @@ func GetItemsByUser(c *gin.Context) {
 }
 
 func CreateItem(c *gin.Context) {
-	AdminAuth(c)
 	var item Item
 
 	if err := c.BindJSON(&item); err != nil {

@@ -3,7 +3,8 @@ package service
 import (
 	"log"
 	"net/http"
-	DBEngine "sr-server/database"
+
+	DBEngine "github.com/kittanutp/salesrecorder/database"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,7 +27,7 @@ func GetSaleItems(c *gin.Context) {
 }
 
 func AddSale(c *gin.Context) {
-	user_id := GetHeaderAuth(c)
+	user_id := 1
 	var addSale addSaleSchema
 	if err := c.BindJSON(&addSale); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
