@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -13,7 +14,7 @@ func (db *DBController) GetItems(c *gin.Context) {
 	var items []database.Item
 	res := db.Database.Find(&items)
 	if res.Error != nil {
-		log.Fatalf("Unable to execute the query. %v", res.Error)
+		c.AbortWithStatusJSON(400, fmt.Sprintf("Unable to execute the query. %v", res.Error))
 	}
 	c.JSON(http.StatusOK, items)
 }
@@ -30,7 +31,7 @@ func (db *DBController) GetItemsByUser(c *gin.Context) {
 	res := db.Database.Find(&items, "user_id = ?", user.ID)
 
 	if res.Error != nil {
-		log.Fatalf("Unable to execute the query. %v", res.Error)
+		c.AbortWithStatusJSON(400, fmt.Sprintf("Unable to execute the query. %v", res.Error))
 	}
 	c.JSON(http.StatusOK, items)
 }
@@ -55,7 +56,7 @@ func (db *DBController) CreateItem(c *gin.Context) {
 	res := db.Database.Create(&item)
 
 	if res.Error != nil {
-		log.Fatalf("Unable to execute the query. %v", res.Error)
+		c.AbortWithStatusJSON(400, fmt.Sprintf("Unable to execute the query. %v", res.Error))
 	}
 
 	log.Printf("Inserted a single record %v", item.ID)

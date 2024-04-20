@@ -24,3 +24,13 @@ type UserRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
+
+type AddSaleSchema struct {
+	Price float64          `json:"price"`
+	Sales []SaleItemSchema `json:"sales"`
+}
+
+type SaleItemSchema struct {
+	ItemID int `json:"item_id"`
+	Amount int `json:"amount"`
+}

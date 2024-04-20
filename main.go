@@ -24,31 +24,35 @@ func main() {
 	adminRoutes := router.Group(("api/admin"))
 	adminRoutes.Use(middleware.AuthApp())
 	{
-		adminRoutes.GET("test", service.Test)
-		adminRoutes.POST("create-user", crtl.CreateUser)
 		adminRoutes.GET("all-item", crtl.GetItems)
 
 	}
-	// saleRoutes := router.Group("api/sale")
-	// {
-	// 	saleRoutes.GET("get-sales", service.GetSaleItems)
-	// 	saleRoutes.POST("add-sale", service.AddSale)
 
-	// }
+	userRoutes := router.Group("api/user")
+	userRoutes.Use(middleware.AuthApp())
+	{
+		userRoutes.POST("new", crtl.CreateUser)
+		userRoutes.POST("login", crtl.LogIn)
+	}
+
+	userAuthRoutes := router.Group("api/user")
+	userAuthRoutes.Use(middleware.AuthUser())
+	{
+		userAuthRoutes.GET("info", crtl.GetUserInfo)
+	}
+
 	itemRoutes := router.Group("api/item")
 	itemRoutes.Use(middleware.AuthUser())
 	{
 		itemRoutes.GET("user", crtl.GetItemsByUser)
 		itemRoutes.POST("create", crtl.CreateItem)
 	}
-	userRoutes := router.Group("api/user")
+
+	saleRoutes := router.Group("api/sale")
+	saleRoutes.Use(middleware.AuthUser())
 	{
-		userRoutes.POST("login", crtl.LogIn)
-	}
-	userAuthRoutes := router.Group("api/user")
-	userAuthRoutes.Use(middleware.AuthUser())
-	{
-		userAuthRoutes.GET("info", crtl.GetUserInfo)
+		// 	saleRoutes.GET("get-sales", service.GetSaleItems)
+		saleRoutes.POST("add-sale", crtl.AddSale)
 	}
 
 	router.Run("localhost:8000")

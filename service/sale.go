@@ -1,53 +1,49 @@
 package service
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 
-	DBEngine "github.com/kittanutp/salesrecorder/database"
+	"github.com/kittanutp/salesrecorder/database"
+	"github.com/kittanutp/salesrecorder/schema"
 
 	"github.com/gin-gonic/gin"
 )
 
-type SaleItem = DBEngine.SaleItem
-type Sale = DBEngine.Sale
-
-type saleItemSchema struct {
-	ItemID int `json:"item_id"`
-	Amount int `json:"amount"`
-}
-
-type addSaleSchema struct {
-	Price float64          `json:"price"`
-	Sales []saleItemSchema `json:"sales"`
-}
-
-func GetSaleItems(c *gin.Context) {
+func (db *DBController) GetSaleItems(c *gin.Context) {
 	c.JSON(http.StatusOK, "OK")
 }
 
-func AddSale(c *gin.Context) {
-	user_id := 1
-	var addSale addSaleSchema
+func (db *DBController) AddSale(c *gin.Context) {
+	user, err := GetUserFromCtx(c)
+	if err != nil {
+		c.AbortWithStatusJSON(400, err)
+		return
+	}
+	var addSale schema.AddSaleSchema
 	if err := c.BindJSON(&addSale); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-	db := DBEngine.CreateConnection()
-	defer db.Close()
-	var sale Sale
-	sqlStatement := `INSERT INTO "sale" ("user_id", "created_at", "price") 	VALUES ($1, now(), $2)	RETURNING "id";`
-	err := db.QueryRow(sqlStatement, user_id, addSale.Price).Scan(&sale.ID)
-	if err != nil {
-		log.Fatalf("Unable to execute the query. %v", err)
-	}
-	sqlStatement = `INSERT INTO "sale_item" ("sale_id", "item_id", "amount") 	VALUES ($1, $2, $3) RETURNING "id";`
-	var sale_item SaleItem
+
+	sale := database.Sale{Price: addSale.Price, UserID: user.ID}
+
+	var sale_items []database.SaleItem
 	for _, each := range addSale.Sales {
-		err := db.QueryRow(sqlStatement, sale.ID, each.ItemID, each.Amount).Scan(&sale_item.ID)
-		if err != nil {
-			log.Fatalf("Unable to execute the query. %v", err)
-		}
+		sale_items = append(sale_items, database.SaleItem{
+			ItemID: uint(each.ItemID),
+			Amount: each.Amount,
+			SaleID: sale.ID,
+		})
 	}
-	c.JSON(http.StatusOK, gin.H{"id": sale.ID, "price": addSale.Price, "sales": addSale.Sales})
+
+	sale.Items = sale_items
+	res := db.Database.Create(&sale)
+
+	if res.Error != nil {
+		c.AbortWithStatusJSON(400, fmt.Sprintf("Unable to execute the query. %v", res.Error))
+		return
+	}
+
+	c.JSON(http.StatusOK, sale)
 }

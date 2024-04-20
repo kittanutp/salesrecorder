@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"log"
+	"fmt"
 	"net/http"
 
 	"github.com/kittanutp/salesrecorder/database"
@@ -28,7 +28,8 @@ func (db *DBController) CreateUser(c *gin.Context) {
 	res := db.Database.Create(&user)
 
 	if res.Error != nil {
-		log.Fatalf("Unable to execute the query. %v", res.Error)
+		c.AbortWithStatusJSON(400, fmt.Sprintf("Unable to execute the query. %v", res.Error))
+		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"username": user.Username, "id": user.ID, "created_at": user.CreatedAt})
