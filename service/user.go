@@ -40,11 +40,15 @@ func (db *DBController) LogIn(c *gin.Context) {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-	var user = database.User{Username: requestedUser.Username}
-	db.Database.First(&user)
+	user, err := GetUserUsername(db.Database, requestedUser.Username)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Wrong username or password"})
+		return
+	}
 	hashPassword := sha256.New()
 	hashPassword.Write([]byte(requestedUser.Password))
 	requestedUser.Password = hex.EncodeToString(hashPassword.Sum((nil)))
+
 	if requestedUser.Password != user.Password {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Wrong username or password"})
 		return
