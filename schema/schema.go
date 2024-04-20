@@ -15,11 +15,9 @@ type Sale struct {
 }
 
 type Item struct {
-	ID        int     `json:"id"`
-	Name      string  `json:"name"`
-	CreatedAt string  `json:"created_at"`
-	Cost      float64 `json:"cost"`
-	UserID    int     `json:"user_id"`
+	ID   int     `json:"id"`
+	Name string  `json:"name"`
+	Cost float64 `json:"cost"`
 }
 
 type UserRequest struct {

@@ -26,6 +26,7 @@ func main() {
 	{
 		adminRoutes.GET("test", service.Test)
 		adminRoutes.POST("create-user", crtl.CreateUser)
+		adminRoutes.GET("all-item", crtl.GetItems)
 
 	}
 	// saleRoutes := router.Group("api/sale")
@@ -34,13 +35,12 @@ func main() {
 	// 	saleRoutes.POST("add-sale", service.AddSale)
 
 	// }
-	// itemRoutes := router.Group("api/item")
-	// itemRoutes.Use()
-	// {
-	// 	itemRoutes.GET("all", service.GetItems)
-	// 	itemRoutes.GET("user", service.GetItemsByUser)
-	// 	itemRoutes.POST("create", service.CreateItem)
-	// }
+	itemRoutes := router.Group("api/item")
+	itemRoutes.Use(middleware.AuthUser())
+	{
+		itemRoutes.GET("user", crtl.GetItemsByUser)
+		itemRoutes.POST("create", crtl.CreateItem)
+	}
 	userRoutes := router.Group("api/user")
 	{
 		userRoutes.POST("login", crtl.LogIn)
